@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leaf Disease AI | Deep Learning Crop Diagnosis</title>
+    <meta name="description" content="Upload a crop leaf image and instantly identify its disease using Artificial Intelligence.">
+
+    <!-- Google Fonts: Professional Typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌿</text></svg>">
+</head>
+<body>
+
+    <!-- Animated background particles -->
+    <div class="bg-glow bg-glow-1"></div>
+    <div class="bg-glow bg-glow-2"></div>
+    <div class="bg-glow bg-glow-3"></div>
+
+    <!-- ========================================================================
+         NAVIGATION BAR
+    ========================================================================= -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-container">
+            <a href="#home" class="nav-logo">
+                <span class="logo-icon">🌿</span>
+                <span class="logo-text">Leaf Disease AI</span>
+            </a>
+
+            <ul class="nav-links" id="navLinks">
+                <li><a href="#home" class="nav-link active">Home</a></li>
+                <li><a href="#about" class="nav-link">About</a></li>
+                <li><a href="#how-it-works" class="nav-link">How It Works</a></li>
+                <li><a href="#contact" class="nav-link">Contact</a></li>
+            </ul>
+
+            <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- ========================================================================
+         HOME / HERO SECTION
+    ========================================================================= -->
+    <section class="hero" id="home">
+        <div class="container">
+            <div class="hero-content">
+                <div class="hero-badge">
+                    <i class="fa-solid fa-microchip"></i>
+                    <span>Powered by Deep Learning</span>
+                </div>
+
+                <h1 class="hero-title">
+                    <span class="emoji-leaf">🌿</span>
+                    Leaf Disease Prediction using
+                    <span class="gradient-text">Deep Learning</span>
+                </h1>
+
+                <p class="hero-subtitle">
+                    Upload a crop leaf image and instantly identify its disease
+                    using Artificial Intelligence.
+                </p>
+            </div>
+
+            <!-- ==================================================================
+                 UPLOAD CARD
+            =================================================================== -->
+            <div class="upload-card glass-card" id="uploadCard">
+
+                <!-- Drag & Drop Zone -->
+                <div class="drop-zone" id="dropZone">
+                    <input type="file" id="fileInput" accept=".jpg,.jpeg,.png" hidden>
+
+                    <div class="drop-zone-content" id="dropZoneContent">
+                        <div class="upload-icon-wrapper">
+                            <i class="fa-solid fa-cloud-arrow-up upload-icon"></i>
+                        </div>
+                        <h3>Drag &amp; Drop your leaf image here</h3>
+                        <p class="drop-zone-or">OR</p>
+                        <div class="drop-zone-btn-group">
+                            <button class="btn btn-browse" id="browseBtn" type="button">
+                                <i class="fa-solid fa-folder-open"></i>
+                                Browse Image
+                            </button>
+                            <button class="btn btn-camera" id="cameraBtn" type="button">
+                                <i class="fa-solid fa-camera"></i>
+                                Capture Photo
+                            </button>
+                        </div>
+                        <p class="drop-zone-hint">Supported formats: JPG, JPEG, PNG (Max 8MB)</p>
+                    </div>
+
+                    <!-- Image Preview (hidden until an image is chosen) -->
+                    <div class="image-preview-wrapper" id="imagePreviewWrapper" style="display:none;">
+                        <img id="imagePreview" class="image-preview" src="" alt="Uploaded leaf preview">
+                        <button class="remove-image-btn" id="removeImageBtn" type="button" title="Remove image">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <button class="btn btn-predict" id="predictBtn" type="button" disabled>
+                        <i class="fa-solid fa-magnifying-glass-chart"></i>
+                        <span>Predict Disease</span>
+                    </button>
+                    <button class="btn btn-reset" id="resetBtn" type="button">
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span>Reset</span>
+                    </button>
+                </div>
+
+                <!-- Flash Messages -->
+                <div id="flashMessages" class="flash-messages"></div>
+            </div>
+
+            <!-- ==================================================================
+                 LOADING / ANALYZING STATE
+            =================================================================== -->
+            <div class="analyzing-card glass-card" id="analyzingCard" style="display:none;">
+                <div class="spinner"></div>
+                <h3 class="analyzing-text">Analyzing Leaf<span class="dots"><span>.</span><span>.</span><span>.</span></span></h3>
+                <p class="analyzing-subtext">Our AI is examining texture, color, and lesion patterns</p>
+            </div>
+
+            <!-- ==================================================================
+                 RESULTS SECTION (populated dynamically by script.js)
+            =================================================================== -->
+            <div class="results-section" id="resultsSection" style="display:none;">
+
+                <!-- Pipeline Flow Indicator -->
+                <div class="pipeline-flow glass-card">
+                    <div class="pipeline-step active" data-step="upload">
+                        <i class="fa-solid fa-image"></i><span>Uploaded Image</span>
+                    </div>
+                    <i class="fa-solid fa-chevron-right pipeline-arrow"></i>
+                    <div class="pipeline-step active" data-step="processing">
+                        <i class="fa-solid fa-brain"></i><span>AI Processing</span>
+                    </div>
+                    <i class="fa-solid fa-chevron-right pipeline-arrow"></i>
+                    <div class="pipeline-step active" data-step="prediction">
+                        <i class="fa-solid fa-chart-simple"></i><span>Prediction</span>
+                    </div>
+                    <i class="fa-solid fa-chevron-right pipeline-arrow"></i>
+                    <div class="pipeline-step active" data-step="confidence">
+                        <i class="fa-solid fa-gauge-high"></i><span>Confidence</span>
+                    </div>
+                    <i class="fa-solid fa-chevron-right pipeline-arrow"></i>
+                    <div class="pipeline-step active" data-step="info">
+                        <i class="fa-solid fa-circle-info"></i><span>Disease Info</span>
+                    </div>
+                    <i class="fa-solid fa-chevron-right pipeline-arrow"></i>
+                    <div class="pipeline-step active" data-step="treatment">
+                        <i class="fa-solid fa-kit-medical"></i><span>Treatment</span>
+                    </div>
+                    <i class="fa-solid fa-chevron-right pipeline-arrow"></i>
+                    <div class="pipeline-step active" data-step="similar">
+                        <i class="fa-solid fa-images"></i><span>Similar Images</span>
+                    </div>
+                </div>
+
+                <div class="results-grid">
+
+                    <!-- Uploaded Image + Prediction Summary -->
+                    <div class="result-card glass-card image-result-card">
+                        <h3 class="card-title"><i class="fa-solid fa-image"></i> Uploaded Image</h3>
+                        <img id="resultImage" class="result-image" src="" alt="Analyzed leaf">
+                        <div class="image-result-footer">
+                            <div class="status-badge" id="statusBadge"></div>
+                            <button class="btn btn-upload-another" id="uploadAnotherBtn" type="button">
+                                <i class="fa-solid fa-arrow-rotate-right"></i>
+                                Upload Another Image
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Prediction + Confidence -->
+                    <div class="result-card glass-card prediction-result-card">
+                        <h3 class="card-title"><i class="fa-solid fa-chart-simple"></i> Prediction Result</h3>
+
+                        <div class="predicted-disease" id="predictedDisease">--</div>
+                        <div class="predicted-category" id="predictedCategory">--</div>
+
+                        <div class="confidence-block">
+                            <div class="confidence-label">
+                                <span>Confidence</span>
+                                <span id="confidenceValue">0.00 %</span>
+                            </div>
+                            <div class="progress-bar-track">
+                                <div class="progress-bar-fill" id="confidenceBar"></div>
+                            </div>
+                        </div>
+
+                        <!-- Top 3 Predictions -->
+                        <div class="top3-block">
+                            <h4 class="top3-title"><i class="fa-solid fa-ranking-star"></i> Top 3 Predictions</h4>
+                            <div id="top3List" class="top3-list"></div>
+                        </div>
+                    </div>
+
+                    <!-- Disease Information Card -->
+                    <div class="result-card glass-card info-result-card">
+                        <h3 class="card-title"><i class="fa-solid fa-circle-info"></i> Disease Information</h3>
+                        <div class="info-row">
+                            <span class="info-label"><i class="fa-solid fa-virus"></i> Description</span>
+                            <p class="info-value" id="infoDescription">--</p>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label"><i class="fa-solid fa-bug"></i> Causes</span>
+                            <p class="info-value" id="infoCauses">--</p>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label"><i class="fa-solid fa-magnifying-glass"></i> Symptoms</span>
+                            <p class="info-value" id="infoSymptoms">--</p>
+                        </div>
+                    </div>
+
+                    <!-- Treatment & Prevention Card -->
+                    <div class="result-card glass-card treatment-result-card">
+                        <h3 class="card-title"><i class="fa-solid fa-kit-medical"></i> Treatment &amp; Prevention</h3>
+                        <div class="info-row">
+                            <span class="info-label"><i class="fa-solid fa-prescription-bottle-medical"></i> Treatment</span>
+                            <p class="info-value" id="infoTreatment">--</p>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label"><i class="fa-solid fa-shield-halved"></i> Prevention</span>
+                            <p class="info-value" id="infoPrevention">--</p>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Similar Images Gallery -->
+                <div class="similar-images-section glass-card">
+                    <h3 class="card-title"><i class="fa-solid fa-images"></i> Other Leaf Images of Same Disease</h3>
+                    <div class="similar-images-grid" id="similarImagesGrid">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </section>
+
+    <!-- ========================================================================
+         ABOUT SECTION
+    ========================================================================= -->
+    <section class="about-section" id="about">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-tag">About the Project</span>
+                <h2 class="section-title">Bringing AI to the Farm</h2>
+            </div>
+            <div class="about-grid">
+                <div class="about-card glass-card">
+                    <i class="fa-solid fa-seedling about-icon"></i>
+                    <h3>Why It Matters</h3>
+                    <p>Crop diseases cause significant yield losses worldwide. Early and
+                       accurate detection empowers farmers to act quickly, reducing crop
+                       loss and improving food security.</p>
+                </div>
+                <div class="about-card glass-card">
+                    <i class="fa-solid fa-robot about-icon"></i>
+                    <h3>How It's Built</h3>
+                    <p>This application uses a Convolutional Neural Network (CNN) trained
+                       on thousands of labeled leaf images to recognize visual patterns
+                       associated with 15 different disease and healthy classes.</p>
+                </div>
+                <div class="about-card glass-card">
+                    <i class="fa-solid fa-leaf about-icon"></i>
+                    <h3>Supported Crops</h3>
+                    <p>Currently supports Pepper Bell, Potato, and Tomato plants, covering
+                       common bacterial, fungal, viral, and pest-related conditions.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========================================================================
+         HOW IT WORKS SECTION
+    ========================================================================= -->
+    <section class="how-it-works-section" id="how-it-works">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-tag">Process</span>
+                <h2 class="section-title">How It Works</h2>
+            </div>
+            <div class="steps-grid">
+                <div class="step-card glass-card">
+                    <div class="step-number">1</div>
+                    <i class="fa-solid fa-upload step-icon"></i>
+                    <h3>Upload</h3>
+                    <p>Drag &amp; drop or browse to upload a clear photo of a crop leaf.</p>
+                </div>
+                <div class="step-card glass-card">
+                    <div class="step-number">2</div>
+                    <i class="fa-solid fa-gears step-icon"></i>
+                    <h3>Preprocess</h3>
+                    <p>The image is resized, normalized, and prepared for the neural network.</p>
+                </div>
+                <div class="step-card glass-card">
+                    <div class="step-number">3</div>
+                    <i class="fa-solid fa-brain step-icon"></i>
+                    <h3>Predict</h3>
+                    <p>Our trained CNN model analyzes the image and predicts the disease class.</p>
+                </div>
+                <div class="step-card glass-card">
+                    <div class="step-number">4</div>
+                    <i class="fa-solid fa-clipboard-list step-icon"></i>
+                    <h3>Report</h3>
+                    <p>View confidence scores, disease details, treatment tips, and similar images.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========================================================================
+         CONTACT SECTION
+    ========================================================================= -->
+    <section class="contact-section" id="contact">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-tag">Get In Touch</span>
+                <h2 class="section-title">Contact</h2>
+            </div>
+            <div class="contact-card glass-card">
+                <p>Have questions, feedback, or collaboration ideas? Reach out through
+                   any of the channels below.</p>
+                <div class="contact-links">
+                    <a href="https://github.com/" target="_blank" rel="noopener" class="btn btn-social">
+                        <i class="fa-brands fa-github"></i> GitHub
+                    </a>
+                    <a href="https://linkedin.com/" target="_blank" rel="noopener" class="btn btn-social">
+                        <i class="fa-brands fa-linkedin"></i> LinkedIn
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========================================================================
+         FOOTER
+    ========================================================================= -->
+    <footer class="footer">
+        <div class="container footer-container">
+            <p class="footer-text">
+                Developed by
+                <span class="footer-name">Mohammad Akif Akhtar</span>
+            </p>
+            <div class="footer-socials">
+                <a href="https://github.com/" target="_blank" rel="noopener" title="GitHub">
+                    <i class="fa-brands fa-github"></i>
+                </a>
+                <a href="https://linkedin.com/" target="_blank" rel="noopener" title="LinkedIn">
+                    <i class="fa-brands fa-linkedin"></i>
+                </a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- ========================================================================
+         CAMERA CAPTURE MODAL
+         Lets the farmer take a photo directly with their device camera
+         instead of picking a file from storage.
+    ========================================================================= -->
+    <div class="camera-modal-overlay" id="cameraModalOverlay" style="display:none;">
+        <div class="camera-modal glass-card">
+            <div class="camera-modal-header">
+                <h3><i class="fa-solid fa-camera"></i> Capture Leaf Photo</h3>
+                <button class="camera-close-btn" id="cameraCloseBtn" type="button" aria-label="Close camera">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="camera-video-wrapper">
+                <video id="cameraVideo" autoplay playsinline muted></video>
+                <p class="camera-error-msg" id="cameraErrorMsg" style="display:none;">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    Unable to access camera. Please check permissions or use "Browse Image" instead.
+                </p>
+            </div>
+
+            <!-- Hidden canvas used to snapshot a frame from the video stream -->
+            <canvas id="cameraCanvas" style="display:none;"></canvas>
+
+            <div class="camera-modal-actions">
+                <button class="btn btn-capture-shutter" id="captureShutterBtn" type="button">
+                    <i class="fa-solid fa-camera"></i>
+                    Take Photo
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
