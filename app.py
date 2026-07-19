@@ -492,7 +492,8 @@ def predict_leaf(image_path):
 
     logger.info("STEP 2")
 
-    prediction = model(processed_image, training=False).numpy()
+    #prediction = model(processed_image, training=False).numpy()
+    prediction = model.predict(processed_image, verbose=0)
 
     logger.info("STEP 3")
 
