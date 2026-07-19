@@ -47,8 +47,26 @@ import tensorflow as tf
 # instance (e.g. Render free tier), letting TF spin up many threads adds
 # overhead without meaningfully speeding up a single-image prediction, and
 # can contribute to the process getting OOM-killed under gunicorn.
-tf.config.threading.set_intra_op_parallelism_threads(1)
-tf.config.threading.set_inter_op_parallelism_threads(1)
+#
+# IMPORTANT: set_intra_op_parallelism_threads()/set_inter_op_parallelism_
+# threads() MUST run before any TensorFlow op has executed, or TF raises
+# RuntimeError: "Intra op parallelism cannot be modified after
+# initialization". Under gunicorn, module re-imports, health-check probes,
+# or a `--preload` Procfile flag can cause TF to already be "warmed up" by
+# the time this line runs, which would otherwise crash the worker on boot
+# with no prediction-related error at all. Wrapping in try/except makes
+# this purely a best-effort optimization instead of a hard startup
+# dependency.
+try:
+    tf.config.threading.set_intra_op_parallelism_threads(1)
+    tf.config.threading.set_inter_op_parallelism_threads(1)
+except RuntimeError as thread_config_error:
+    # TF was already initialized elsewhere (e.g. re-import under gunicorn).
+    # Safe to ignore — the app will just use TF's default thread settings.
+    logging.getLogger(__name__).warning(
+        "Could not set TF thread limits (already initialized): %s",
+        thread_config_error,
+    )
 
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing import image as keras_image
