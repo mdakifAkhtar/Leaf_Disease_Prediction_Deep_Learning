@@ -381,6 +381,22 @@ def load_model_once():
     except Exception as exc:  # noqa: BLE001 - log any load failure clearly
         logger.exception("Failed to load model: %s", exc)
         return None
+    
+
+    # ==============================================================================
+# LOAD MODEL WHEN THE APPLICATION STARTS
+# ==============================================================================
+# This executes when app.py is imported by Gunicorn (Render) or by Flask.
+# Therefore the model is loaded exactly one time.
+
+model = load_model_once()
+
+if model is None:
+    logger.warning(
+        "Application started WITHOUT loading the model."
+    )
+else:
+    logger.info("Model loaded successfully and ready for predictions.")
 
 
 # ==============================================================================
@@ -776,15 +792,21 @@ def internal_server_error(_error):
 # APPLICATION ENTRY POINT
 # ==============================================================================
 
+# ==============================================================================
+# APPLICATION ENTRY POINT
+# ==============================================================================
+
 if __name__ == "__main__":
-    # Load the model once at startup, before accepting any requests
-    model = load_model_once()
+    """
+    This block runs ONLY when executing:
+    python app.py
+    Render uses Gunicorn:gunicorn app:app
+    so this block is NOT executed on Render.
+    The model has already been loaded above when the module was imported.
+    """
 
-    if model is None:
-        logger.warning(
-            "Application is starting WITHOUT a loaded model. "
-            "Prediction requests will fail until '%s' is available.",
-            Config.MODEL_PATH,
-        )
-
-    app.run(debug=True, host="0.0.0.0", port=8000)
+    app.run(
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", 8000)),
+        debug=True,
+    )
