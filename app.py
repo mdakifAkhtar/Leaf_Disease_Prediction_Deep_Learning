@@ -9,6 +9,9 @@ Purpose : Serve a TensorFlow/Keras CNN model that classifies crop leaf images
           treatment guidance, and similar sample images from the dataset.
 ================================================================================
 """
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
 import os
 import random
@@ -16,7 +19,6 @@ import logging
 import tempfile
 import base64
 import mimetypes
-import time
 
 import numpy as np
 from flask import (
@@ -29,6 +31,11 @@ from flask import (
     url_for,
     send_from_directory,
 )
+
+import tensorflow as tf
+tf.config.threading.set_intra_op_parallelism_threads(1)
+tf.config.threading.set_inter_op_parallelism_threads(1)
+
 from werkzeug.utils import secure_filename
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing import image as keras_image
@@ -475,39 +482,29 @@ def preprocess_image(image_path):
 
 
 def predict_leaf(image_path):
-    """
-    Run a full prediction on the given leaf image using the loaded model.
 
-    Args:
-        image_path (str): Full filesystem path to the uploaded image.
-
-    Returns:
-        tuple: (predicted_class (str), confidence (float), raw_predictions
-        (numpy.ndarray)) where raw_predictions is the full probability
-        vector across all 15 classes.
-
-    Raises:
-        RuntimeError: If the model has not been successfully loaded.
-    """
     if model is None:
-        raise RuntimeError("Model is not loaded. Cannot run prediction.")
+        raise RuntimeError("Model is not loaded.")
 
-    # Preprocess the image using the training-consistent pipeline
+    logger.info("STEP 1")
+
     processed_image = preprocess_image(image_path)
 
-    # Run inference. Calling the model directly (model(x, training=False))
-    # is faster than model.predict(x) for single-image requests, since it
-    # skips the extra batching/callback overhead .predict() adds — this
-    # matters on slow free-tier CPUs where every second counts against the
-    # WSGI server's request timeout.
-    inference_start = time.time()
-    prediction = model(processed_image, training=False).numpy()
-    logger.info("Inference completed in %.2f seconds", time.time() - inference_start)
+    logger.info("STEP 2")
 
-    # Determine the class with the highest probability
+    prediction = model(processed_image, training=False).numpy()
+
+    logger.info("STEP 3")
+
     predicted_index = int(np.argmax(prediction))
+
+    logger.info("STEP 4")
+
     predicted_class = CLASS_NAMES[predicted_index]
+
     confidence = float(np.max(prediction) * 100)
+
+    logger.info("STEP 5")
 
     return predicted_class, confidence, prediction[0]
 
@@ -783,31 +780,35 @@ def internal_server_error(_error):
 # APPLICATION ENTRY POINT
 # ==============================================================================
 
-# IMPORTANT: The model is loaded here, at MODULE level, rather than inside
-# `if __name__ == "__main__":`. This is critical for production deployment.
-# WSGI servers such as gunicorn (commonly used on Render, Heroku, etc.)
-# import this file as a module and call the `app` object directly — they
-# never execute the `if __name__ == "__main__":` block. Loading the model
-# at module level guarantees it is loaded exactly once, regardless of
-# whether the app is started with `python app.py` (local dev) or
-# `gunicorn app:app` (production).
+# ==============================================================================
+# LOAD MODEL WHEN APP STARTS
+# ==============================================================================
+
+# ==============================================================================
+# LOAD MODEL WHEN APPLICATION STARTS
+# ==============================================================================
+# This runs when Gunicorn imports app.py (Render) and also when running
+# python app.py locally.
+
 model = load_model_once()
 
 if model is None:
-    logger.warning(
-        "Application is starting WITHOUT a loaded model. "
-        "Prediction requests will fail until '%s' is available.",
-        Config.MODEL_PATH,
-    )
+    logger.error("Failed to load model.")
+else:
+    logger.info("Model loaded successfully.")
+
+
+# ==============================================================================
+# APPLICATION ENTRY POINT
+# ==============================================================================
+# This block runs ONLY when you execute:
+# python app.py
+# It does NOT run on Render because Render uses:
+# gunicorn app:app
 
 if __name__ == "__main__":
-    # Local development server only. In production, use a WSGI server
-    # such as gunicorn (see Procfile), which imports this module directly
-    # and never reaches this block. PORT is read from the environment so
-    # this also works correctly if ever run directly on a platform like
-    # Render that assigns its own port.
     app.run(
-        debug=True,
         host="0.0.0.0",
-        port=int(os.environ.get("PORT", 5000)),
+        port=int(os.environ.get("PORT", 8000)),
+        debug=True,
     )
