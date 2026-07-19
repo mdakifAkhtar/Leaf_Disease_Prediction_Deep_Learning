@@ -822,15 +822,3 @@ if __name__ == "__main__":
 
 
 
-
-
-    import time
-
-start = time.time()
-
-prediction = model(processed_image, training=False).numpy()
-
-logger.info(
-    "Prediction completed in %.2f seconds",
-    time.time() - start
-)
