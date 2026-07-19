@@ -16,6 +16,7 @@ import logging
 import tempfile
 import base64
 import mimetypes
+import time
 
 import numpy as np
 from flask import (
@@ -381,22 +382,6 @@ def load_model_once():
     except Exception as exc:  # noqa: BLE001 - log any load failure clearly
         logger.exception("Failed to load model: %s", exc)
         return None
-    
-
-    # ==============================================================================
-# LOAD MODEL WHEN THE APPLICATION STARTS
-# ==============================================================================
-# This executes when app.py is imported by Gunicorn (Render) or by Flask.
-# Therefore the model is loaded exactly one time.
-
-model = load_model_once()
-
-if model is None:
-    logger.warning(
-        "Application started WITHOUT loading the model."
-    )
-else:
-    logger.info("Model loaded successfully and ready for predictions.")
 
 
 # ==============================================================================
@@ -510,17 +495,14 @@ def predict_leaf(image_path):
     # Preprocess the image using the training-consistent pipeline
     processed_image = preprocess_image(image_path)
 
-    # Run inference
-    import time
-
-    start = time.time()
-
+    # Run inference. Calling the model directly (model(x, training=False))
+    # is faster than model.predict(x) for single-image requests, since it
+    # skips the extra batching/callback overhead .predict() adds — this
+    # matters on slow free-tier CPUs where every second counts against the
+    # WSGI server's request timeout.
+    inference_start = time.time()
     prediction = model(processed_image, training=False).numpy()
-
-    logger.info(
-    "Prediction completed in %.2f seconds",
-    time.time() - start
-)
+    logger.info("Inference completed in %.2f seconds", time.time() - inference_start)
 
     # Determine the class with the highest probability
     predicted_index = int(np.argmax(prediction))
@@ -801,24 +783,31 @@ def internal_server_error(_error):
 # APPLICATION ENTRY POINT
 # ==============================================================================
 
-# ==============================================================================
-# APPLICATION ENTRY POINT
-# ==============================================================================
+# IMPORTANT: The model is loaded here, at MODULE level, rather than inside
+# `if __name__ == "__main__":`. This is critical for production deployment.
+# WSGI servers such as gunicorn (commonly used on Render, Heroku, etc.)
+# import this file as a module and call the `app` object directly — they
+# never execute the `if __name__ == "__main__":` block. Loading the model
+# at module level guarantees it is loaded exactly once, regardless of
+# whether the app is started with `python app.py` (local dev) or
+# `gunicorn app:app` (production).
+model = load_model_once()
 
-if __name__ == "__main__":
-    """
-    This block runs ONLY when executing:
-    python app.py
-    Render uses Gunicorn:gunicorn app:app
-    so this block is NOT executed on Render.
-    The model has already been loaded above when the module was imported.
-    """
-
-    app.run(
-        host="0.0.0.0",
-        port=int(os.environ.get("PORT", 8000)),
-        debug=True,
+if model is None:
+    logger.warning(
+        "Application is starting WITHOUT a loaded model. "
+        "Prediction requests will fail until '%s' is available.",
+        Config.MODEL_PATH,
     )
 
-
-
+if __name__ == "__main__":
+    # Local development server only. In production, use a WSGI server
+    # such as gunicorn (see Procfile), which imports this module directly
+    # and never reaches this block. PORT is read from the environment so
+    # this also works correctly if ever run directly on a platform like
+    # Render that assigns its own port.
+    app.run(
+        debug=True,
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", 5000)),
+    )
