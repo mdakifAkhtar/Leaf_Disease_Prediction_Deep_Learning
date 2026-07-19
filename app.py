@@ -511,7 +511,16 @@ def predict_leaf(image_path):
     processed_image = preprocess_image(image_path)
 
     # Run inference
-    prediction = model.predict(processed_image)
+    import time
+
+    start = time.time()
+
+    prediction = model(processed_image, training=False).numpy()
+
+    logger.info(
+    "Prediction completed in %.2f seconds",
+    time.time() - start
+)
 
     # Determine the class with the highest probability
     predicted_index = int(np.argmax(prediction))
@@ -810,3 +819,18 @@ if __name__ == "__main__":
         port=int(os.environ.get("PORT", 8000)),
         debug=True,
     )
+
+
+
+
+
+    import time
+
+start = time.time()
+
+prediction = model(processed_image, training=False).numpy()
+
+logger.info(
+    "Prediction completed in %.2f seconds",
+    time.time() - start
+)
