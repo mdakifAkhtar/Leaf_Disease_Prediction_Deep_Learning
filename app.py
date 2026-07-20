@@ -17,12 +17,13 @@ import os
 #     time. Forcing CPU avoids wasted memory/time probing for a GPU that
 #     doesn't exist on Render's free tier, and reduces peak memory usage,
 #     which is the more common cause of a crashed/unresponsive worker than
-#     any correctness issue.ok
+#     any correctness issue.
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
 import random
 import logging
+import threading
 import tempfile
 import base64
 import mimetypes
@@ -842,32 +843,42 @@ if model is None:
         Config.MODEL_PATH,
     )
 else:
-    # --- WARM-UP PREDICTION -------------------------------------------------
+    # --- WARM-UP PREDICTION (BACKGROUND THREAD) -------------------------
     # TensorFlow builds/traces its internal computation graph the FIRST
     # time a model is called, and this can take many seconds — even
     # longer on a slow, memory-constrained CPU like Render's free tier.
-    # If that cost is paid during a user's first real request, it can
-    # push the request past gunicorn's timeout, causing the worker to be
-    # killed mid-response (empty/truncated response, looks like the app
-    # "isn't working" even though the model loaded fine). Running one
-    # throwaway prediction here, at startup, pays that one-time cost
-    # during boot instead — which Render tolerates far better than an
-    # in-flight HTTP request.
-    try:
-        warmup_start = time.time()
-        target_size = Config.IMAGE_SIZE
+    #
+    # IMPORTANT: this warm-up must NOT block application startup. If it
+    # runs synchronously here and takes too long, gunicorn never finishes
+    # binding to the port in time for Render's health check / boot
+    # timeout, Render decides the deploy failed, and restarts the app —
+    # which starts this same slow process over again, forever. From the
+    # browser's point of view this looks like a request that never
+    # resolves (exactly the multi-minute "Analyzing Leaf..." hang).
+    #
+    # Running the warm-up in a daemon background thread lets gunicorn
+    # bind to the port and start serving immediately. The very first
+    # real prediction request might still be a bit slow if it arrives
+    # before the warm-up finishes, but the app will always finish
+    # booting successfully.
+    def _warm_up_model():
         try:
-            input_shape = model.input_shape
-            if input_shape and len(input_shape) == 4:
-                target_size = (input_shape[1], input_shape[2])
-        except Exception:  # noqa: BLE001 - fall back to configured size
+            warmup_start = time.time()
             target_size = Config.IMAGE_SIZE
+            try:
+                input_shape = model.input_shape
+                if input_shape and len(input_shape) == 4:
+                    target_size = (input_shape[1], input_shape[2])
+            except Exception:  # noqa: BLE001 - fall back to configured size
+                target_size = Config.IMAGE_SIZE
 
-        dummy_input = np.zeros((1, target_size[0], target_size[1], 3), dtype="float32")
-        model.predict(dummy_input, verbose=0)
-        logger.info("Model warm-up completed in %.2f seconds", time.time() - warmup_start)
-    except Exception as warmup_error:  # noqa: BLE001 - warm-up is best-effort
-        logger.warning("Model warm-up prediction failed (non-fatal): %s", warmup_error)
+            dummy_input = np.zeros((1, target_size[0], target_size[1], 3), dtype="float32")
+            model.predict(dummy_input, verbose=0)
+            logger.info("Model warm-up completed in %.2f seconds", time.time() - warmup_start)
+        except Exception as warmup_error:  # noqa: BLE001 - warm-up is best-effort
+            logger.warning("Model warm-up prediction failed (non-fatal): %s", warmup_error)
+
+    threading.Thread(target=_warm_up_model, daemon=True).start()
 
 if __name__ == "__main__":
     # Local development server only. In production, use a WSGI server
