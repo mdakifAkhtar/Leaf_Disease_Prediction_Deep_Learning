@@ -17,7 +17,7 @@ import os
 #     time. Forcing CPU avoids wasted memory/time probing for a GPU that
 #     doesn't exist on Render's free tier, and reduces peak memory usage,
 #     which is the more common cause of a crashed/unresponsive worker than
-#     any correctness issue.
+#     any correctness issue.ok
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
