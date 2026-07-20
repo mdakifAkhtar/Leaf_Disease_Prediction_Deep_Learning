@@ -394,6 +394,16 @@ DISEASE_INFO = {
 
 model = None  # Global model instance, populated by load_model_once()
 
+# Serializes all calls to model.predict(). TensorFlow/Keras models are not
+# guaranteed to be safe to call concurrently from multiple threads. Without
+# this lock, the background warm-up thread (started at startup) and a real
+# incoming /predict request could call model.predict() at the same instant,
+# which can hang indefinitely rather than error out — this was the cause of
+# requests getting stuck forever after the warm-up was moved to a
+# background thread. Every model.predict() call in this file must acquire
+# this lock first.
+model_lock = threading.Lock()
+
 
 def load_model_once():
     """
@@ -543,8 +553,13 @@ def predict_leaf(image_path):
     # of input casting and batching — this produced WRONG predictions in
     # production. Always use .predict() for correctness; verbose=0 keeps
     # it from spamming stdout with a progress bar on every request.
+    #
+    # model_lock ensures this never runs at the same time as the
+    # background warm-up prediction (or another concurrent request) —
+    # without it, concurrent calls to model.predict() can hang forever.
     inference_start = time.time()
-    prediction = model.predict(processed_image, verbose=0)
+    with model_lock:
+        prediction = model.predict(processed_image, verbose=0)
     logger.info("Inference completed in %.2f seconds", time.time() - inference_start)
 
     # Determine the class with the highest probability
@@ -873,7 +888,8 @@ else:
                 target_size = Config.IMAGE_SIZE
 
             dummy_input = np.zeros((1, target_size[0], target_size[1], 3), dtype="float32")
-            model.predict(dummy_input, verbose=0)
+            with model_lock:
+                model.predict(dummy_input, verbose=0)
             logger.info("Model warm-up completed in %.2f seconds", time.time() - warmup_start)
         except Exception as warmup_error:  # noqa: BLE001 - warm-up is best-effort
             logger.warning("Model warm-up prediction failed (non-fatal): %s", warmup_error)
@@ -889,5 +905,5 @@ if __name__ == "__main__":
     app.run(
         debug=True,
         host="0.0.0.0",
-        port=int(os.environ.get("PORT", 5000)),
+        port=int(os.environ.get("PORT", 8000)),
     )
