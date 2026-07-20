@@ -559,7 +559,7 @@ def predict_leaf(image_path):
     # without it, concurrent calls to model.predict() can hang forever.
     inference_start = time.time()
     with model_lock:
-        prediction = model.predict(processed_image, verbose=0)
+        prediction = model.predict(processed_image)
     logger.info("Inference completed in %.2f seconds", time.time() - inference_start)
 
     # Determine the class with the highest probability
