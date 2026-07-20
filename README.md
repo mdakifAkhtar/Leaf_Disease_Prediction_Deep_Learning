@@ -1,4 +1,4 @@
-                                                             🌿 Leaf Disease Prediction using Deep Learning (CNN)
+🌿 Leaf Disease Prediction using Deep Learning (CNN)
 🚀 Live Demo
 Web Application
 👉 https://leaf-disease-prediction-dl-akif7.onrender.com
@@ -141,6 +141,7 @@ Mohammad Akif Akhtar
 AI & Machine Learning Engineer
 
 GitHub : https://github.com/mdakifAkhtar
+LinkedIn: https://www.linkedin.com/in/mohammad-akif-akhtar-b4a6042b8?utm_source=share_via&utm_content=profile&utm_medium=member_android
 
 Live Demo
 https://leaf-disease-prediction-dl-akif7.onrender.com
