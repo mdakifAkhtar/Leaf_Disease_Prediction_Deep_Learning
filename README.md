@@ -111,12 +111,19 @@ TensorFlow Utilities
   Leaf_Disease_Prediction
 
 │── app.py
+
 │── requirements.txt
+
 │── leaf_disease_model.keras
+
 │── dataset/
+
 │── static/
+
 │── templates/
+
 │── notebooks/
+
 │── README.md
 
 
