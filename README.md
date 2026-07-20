@@ -1,10 +1,14 @@
 🌿 Leaf Disease Prediction using Deep Learning (CNN)
+
 🚀 Live Demo
-Web Application
-👉 https://leaf-disease-prediction-dl-akif7.onrender.com
+
+Web Application   👉 https://leaf-disease-prediction-dl-akif7.onrender.com
 <img width="2928" height="1666" alt="image" src="https://github.com/user-attachments/assets/74dc1868-6462-45bc-82a0-e96e5d4a8759" />
+
 <img width="2102" height="1640" alt="image" src="https://github.com/user-attachments/assets/288e8660-0936-4e31-9686-639ad008f4f8" />
+
 <img width="2018" height="1670" alt="image" src="https://github.com/user-attachments/assets/9e48bdbe-2d9e-45e3-a36d-0561c700d29d" />
+
 <img width="2072" height="1658" alt="image" src="https://github.com/user-attachments/assets/75c16fa9-c974-49e7-a871-cc6204321206" />
 
 
