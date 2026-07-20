@@ -149,9 +149,11 @@ https://leaf-disease-prediction-dl-akif7.onrender.com
 👨‍💻 Author
 
 Mohammad Akif Akhtar
+
 AI & Machine Learning Engineer
 
 GitHub : https://github.com/mdakifAkhtar
+
 LinkedIn: https://www.linkedin.com/in/mohammad-akif-akhtar-b4a6042b8?utm_source=share_via&utm_content=profile&utm_medium=member_android
 
 Live Demo
@@ -159,4 +161,5 @@ https://leaf-disease-prediction-dl-akif7.onrender.com
 
 
 ⭐ Show Your Support
+
 If you found this project useful, please ⭐ star this repository and share it with others.
